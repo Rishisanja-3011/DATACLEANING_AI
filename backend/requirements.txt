@@ -1,0 +1,9 @@
+fastapi 
+unicorn
+pandas
+scikit-learn
+langgraph
+langchain-google-genai
+python-dotenv
+pytest
+python-multipart

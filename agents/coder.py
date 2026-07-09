@@ -25,6 +25,10 @@ CRITICAL INSTRUCTIONS:
 - Make sure to import necessary scikit-learn modules (e.g., SimpleImputer, StandardScaler, LabelEncoder) at the top of the code.
 - The code must modify `df` directly.
 - DO NOT read any CSV file, `df` is already a variable in the environment.
+- When assigning a transformed single column back to `df`, ensure the value is 1D. For example:
+  `df['Data_value'] = imputer_mean.fit_transform(df[['Data_value']])[:, 0]` 
+  or `df['Series_title_3'] = imputer_most_frequent.fit_transform(df[['Series_title_3']]).ravel()`.
+- For a one-column transformation, always use `[:, 0]` or `.ravel()` after `fit_transform` before assignment to `df[column]`.
 """),
         ("user", "Data shape: {shape}\nColumns: {columns}\nMissing values: {missing_values}\nPlan: {plan}\n\nWrite the python code.")
     ])
