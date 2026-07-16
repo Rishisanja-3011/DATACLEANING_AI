@@ -119,9 +119,9 @@ if __name__ == "__main__":
         # =========================
         if result["review"].get("execution_success"):
             result["cleaned_df"].to_csv("cleaned_data.csv", index=False)
-            print("\n✅ Cleaned dataset saved!")
+            print("\n[SUCCESS] Cleaned dataset saved!")
         else:
-            print("\n❌ Pipeline failed to clean dataset.")
+            print("\n[FAILED] Pipeline failed to clean dataset.")
             
     except FileNotFoundError:
         print("electriccard.csv not found. Are you in the root directory?")

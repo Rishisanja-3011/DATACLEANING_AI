@@ -1,5 +1,5 @@
-fastapi 
-unicorn
+fastapi
+uvicorn
 pandas
 scikit-learn
 langgraph

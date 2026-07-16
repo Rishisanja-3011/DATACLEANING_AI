@@ -14,3 +14,11 @@ def test_create_plan(dummy_df):
     # Check if duplicates are removed
     assert "duplicates" in plan
     assert plan["duplicates"] == "remove_duplicates"
+    
+    # Check if ID column is dropped
+    assert "user_id" in plan
+    assert plan["user_id"] == "drop_column"
+    
+    # Check if Date column has feature extraction
+    assert "start_date" in plan
+    assert plan["start_date"] == "extract_datetime_features"

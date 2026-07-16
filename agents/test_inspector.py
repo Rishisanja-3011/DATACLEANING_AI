@@ -4,7 +4,7 @@ def test_inspect_data(dummy_df):
     report = inspect_data(dummy_df)
     
     assert "shape" in report
-    assert report["shape"] == (5, 4)
+    assert report["shape"] == (5, 6)
     
     assert "missing_values" in report
     assert report["missing_values"]["A"] == 1

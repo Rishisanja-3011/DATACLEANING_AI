@@ -8,7 +8,7 @@ def test_execute_and_review(dummy_df):
     
     assert review["execution_success"] is True
     assert "D" not in cleaned_df.columns
-    assert cleaned_df.shape[1] == 3 # A, B, C
+    assert cleaned_df.shape[1] == 5 # user_id, start_date, A, B, C
 
 def test_execute_and_review_failure(dummy_df):
     # This code will crash

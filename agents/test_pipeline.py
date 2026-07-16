@@ -8,6 +8,6 @@ def test_graph_pipeline(dummy_df):
     
     cleaned_df = result["cleaned_df"]
     
-    # Original shape was (5,4). With duplicates removed and D dropped, it should be smaller
+    # Original shape was (5,6). With duplicates removed and D dropped, it should be smaller
     assert cleaned_df.shape[0] < 5
-    assert cleaned_df.shape[1] <= 4 # Might have dummy columns or dropped cols
+    assert cleaned_df.shape[1] <= 6 # Might have dummy columns or dropped cols

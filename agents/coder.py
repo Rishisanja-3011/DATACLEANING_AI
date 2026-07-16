@@ -29,6 +29,8 @@ CRITICAL INSTRUCTIONS:
   `df['Data_value'] = imputer_mean.fit_transform(df[['Data_value']])[:, 0]` 
   or `df['Series_title_3'] = imputer_most_frequent.fit_transform(df[['Series_title_3']]).ravel()`.
 - For a one-column transformation, always use `[:, 0]` or `.ravel()` after `fit_transform` before assignment to `df[column]`.
+- If the plan specifies "onehot_encoding", use `df = pd.get_dummies(df, columns=[...], drop_first=True)`.
+- If the plan specifies "extract_datetime_features", convert the column using `pd.to_datetime()`, extract year, month, and day into new columns, and drop the original date column.
 """),
         ("user", "Data shape: {shape}\nColumns: {columns}\nMissing values: {missing_values}\nPlan: {plan}\n\nWrite the python code.")
     ])
