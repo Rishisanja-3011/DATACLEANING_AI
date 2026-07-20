@@ -196,3 +196,8 @@ def inspect_data(df: pd.DataFrame) -> dict:
     report["possible_datetime_columns"] = possible_dates
 
     return report
+
+
+
+
+    
