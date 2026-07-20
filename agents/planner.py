@@ -1,60 +1,171 @@
-def create_plan(report):
+from typing import Dict, Any
 
-    plan = {}
-    total_rows = report["shape"][0]
 
-    # Phase 1: Identifiers, Dates, and Missing Values
-    for col, missing in report["missing_values"].items():
-        dtype = report["columns"][col]
+def create_plan(report: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create a deterministic preprocessing plan from the Inspector report.
+    """
+
+    plan = {
+        "dataset_actions": [],
+        "column_actions": {}
+    }
+
+    total_rows = report["shape"]["rows"]
+    data_types = report["data_types"]
+
+    # ==========================
+    # Dataset-level actions
+    # ==========================
+
+    if report["duplicate_rows"] > 0:
+        plan["dataset_actions"].append({
+            "action": "remove_duplicates",
+            "reason": f"{report['duplicate_rows']} duplicate rows detected."
+        })
+
+    # ==========================
+    # Column-level actions
+    # ==========================
+
+    for col in report["column_names"]:
+
+        actions = []
+
+        dtype = data_types[col]
+
+        missing = report["missing_values"][col]["count"]
+
+        missing_percentage = report["missing_values"][col]["percentage"]
+
+        unique_values = report["unique_values"][col]
+
+        # --------------------------
+        # Drop constant columns
+        # --------------------------
+
+        if col in report["constant_columns"]:
+
+            actions.append({
+                "action": "drop_column",
+                "reason": "Constant column."
+            })
+
+            plan["column_actions"][col] = actions
+            continue
+
+        # --------------------------
+        # Drop empty columns
+        # --------------------------
+
+        if missing == total_rows:
+
+            actions.append({
+                "action": "drop_column",
+                "reason": "Column is completely empty."
+            })
+
+            plan["column_actions"][col] = actions
+            continue
+
+        # --------------------------
+        # Drop ID columns
+        # --------------------------
+
         col_lower = col.lower()
 
-        # 1. Drop fully empty columns
-        if missing == total_rows:
-            plan[col] = "drop_column"
+        if (
+            col_lower == "id"
+            or col_lower.endswith("_id")
+            or col_lower.endswith("id")
+        ):
+
+            actions.append({
+                "action": "drop_column",
+                "reason": "Identifier column."
+            })
+
+            plan["column_actions"][col] = actions
             continue
 
-        # 2. Identifiers hold no predictive value
-        if col_lower.endswith("_id") or col_lower == "id":
-            plan[col] = "drop_column"
-            continue
+        # --------------------------
+        # Datetime Features
+        # --------------------------
 
-        # 3. Dates need feature extraction
-        if "date" in col_lower or "timestamp" in col_lower or dtype == "datetime64[ns]":
-            plan[col] = "extract_datetime_features"
-            continue
+        if col in report["possible_datetime_columns"]:
 
-        # 4. Impute Missing Values
+            actions.append({
+                "action": "extract_datetime_features",
+                "reason": "Detected datetime column."
+            })
+
+        # --------------------------
+        # Missing Values
+        # --------------------------
+
         if missing > 0:
-            if dtype in ["int64", "float64"]:
-                plan[col] = "mean_imputation"
-            elif dtype in ["object", "str", "string"]:
-                plan[col] = "most_frequent_imputation"
 
-    # Phase 2: Duplicates
-    if report["duplicates"] > 0:
-        plan["duplicates"] = "remove_duplicates"
+            if col in report["numeric_columns"]:
 
-    # Phase 3: Encoding Categoricals
-    for col, dtype in report["columns"].items():
-        if col in plan and plan[col] in ["drop_column", "extract_datetime_features"]:
-            continue
+                actions.append({
+                    "action": "median_imputation",
+                    "reason": f"{missing_percentage}% missing values in numeric column."
+                })
 
-        unique_count = report.get("unique_values", {}).get(col, 0)
+            elif col in report["categorical_columns"]:
 
-        if dtype in ["object", "str", "string"] and col not in plan:
-            # Low-cardinality columns
-            if unique_count <= 10:
-                plan[col] = "onehot_encoding"
-            # High-cardinality columns
+                actions.append({
+                    "action": "most_frequent_imputation",
+                    "reason": f"{missing_percentage}% missing values in categorical column."
+                })
+
+        # --------------------------
+        # Encoding
+        # --------------------------
+
+        if col in report["categorical_columns"]:
+
+            if col in report["high_cardinality_columns"]:
+
+                actions.append({
+                    "action": "label_encoding",
+                    "reason": "High-cardinality categorical column."
+                })
+
             else:
-                plan[col] = "label_encoding"
 
-    # Phase 4: Scaling Numerics
-    for col, dtype in report["columns"].items():
-        if col in plan and plan[col] in ["drop_column", "extract_datetime_features"]:
-            continue
+                actions.append({
+                    "action": "onehot_encoding",
+                    "reason": "Low-cardinality categorical column."
+                })
 
-        if dtype in ["int64", "float64"] and col not in plan:
-            plan[col] = "standard_scaling"
+        # --------------------------
+        # Outlier Handling
+        # --------------------------
+
+        if col in report["numeric_columns"]:
+
+            outlier_count = report["outliers"][col]
+
+            if outlier_count > 0:
+
+                actions.append({
+                    "action": "clip_outliers",
+                    "reason": f"{outlier_count} outliers detected."
+                })
+
+        # --------------------------
+        # Scaling
+        # --------------------------
+
+        if col in report["numeric_columns"]:
+
+            actions.append({
+                "action": "standard_scaling",
+                "reason": "Numeric feature."
+            })
+
+        if actions:
+            plan["column_actions"][col] = actions
 
     return plan

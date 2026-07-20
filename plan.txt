@@ -1,0 +1,472 @@
+DATACLEANING_AI — Complete Project Handoff (Version 2)
+Project Name
+
+DATACLEANING_AI
+
+Tagline
+
+AI-powered Multi-Agent Data Cleaning & Preprocessing System using LangGraph, LangChain, Gemini, Pandas, and Scikit-Learn.
+
+Project Vision
+
+The goal is to build an autonomous AI Data Engineering Assistant that converts messy datasets into machine-learning-ready datasets.
+
+Instead of manually writing preprocessing code, the system should:
+
+Analyze any CSV dataset.
+Detect data quality issues.
+Decide the best preprocessing strategy.
+Generate Python preprocessing code.
+Execute that code safely.
+Validate the results.
+Produce a cleaned dataset and detailed reports.
+
+This is not just a machine learning project—it is an AI Engineering / Agentic AI project.
+
+Current Architecture
+
+The system uses LangGraph StateGraph.
+
+Current pipeline:
+
+CSV
+ ↓
+Inspector Agent
+ ↓
+Planner Agent
+ ↓
+Coder Agent
+ ↓
+Reviewer Agent
+ ↓
+Cleaned CSV
+
+Each agent has one responsibility.
+
+Agent Responsibilities
+1. Inspector Agent
+
+File
+
+agents/inspector.py
+
+Purpose
+
+Deterministically analyze the dataset using pandas.
+
+No LLM should be used here.
+
+Current implementation has been upgraded.
+
+Current features:
+
+Dataset shape
+Row count
+Column count
+Column names
+Memory usage
+Data types
+Numeric columns
+Categorical columns
+Datetime columns
+Boolean columns
+Missing value counts
+Missing value percentages
+Duplicate rows
+Duplicate columns
+Constant columns
+Unique values
+High-cardinality categorical columns
+Numeric statistics
+Mean
+Median
+Standard deviation
+Min
+Max
+Outlier detection (IQR)
+Empty string detection
+Possible datetime detection
+
+Current output:
+
+{
+    "shape": {
+        "rows": ...,
+        "columns": ...
+    },
+    "column_names": [...],
+    "data_types": {...},
+    "numeric_columns": [...],
+    "categorical_columns": [...],
+    "missing_values": {...},
+    "duplicate_rows": ...,
+    "constant_columns": [...],
+    "outliers": {...},
+    ...
+}
+
+Inspector is approximately 90% complete.
+
+2. Planner Agent
+
+File
+
+agents/planner.py
+
+Purpose
+
+Create preprocessing decisions using the Inspector report.
+
+Current status
+
+The Planner has been redesigned conceptually but is not yet fully integrated with the Coder.
+
+Current deterministic decisions include:
+
+Remove duplicate rows
+Drop empty columns
+Drop identifier columns
+Extract datetime features
+Median imputation
+Most-frequent imputation
+One-hot encoding
+Label encoding
+Outlier clipping
+Standard scaling
+
+Current desired output format:
+
+{
+    "dataset_actions": [
+        {
+            "action": "remove_duplicates",
+            "reason": "Duplicate rows detected."
+        }
+    ],
+    "column_actions": {
+        "Age": [
+            {
+                "action": "median_imputation",
+                "reason": "Numeric column with missing values."
+            },
+            {
+                "action": "standard_scaling",
+                "reason": "Numeric feature."
+            }
+        ]
+    }
+}
+
+Planner is approximately 75% complete.
+
+3. Coder Agent
+
+File
+
+agents/coder.py
+
+Purpose
+
+Uses Gemini through LangChain to generate preprocessing code.
+
+Current implementation:
+
+Uses ChatGoogleGenerativeAI
+Uses LangChain PromptTemplate
+Generates Python preprocessing code
+Uses pandas
+Uses scikit-learn
+
+Needs improvement:
+
+Consume the new Planner output format.
+Accept the full structured inspection report (preferably serialized as JSON).
+Produce more robust, deterministic preprocessing code.
+Validate generated syntax before execution.
+Improve prompt instructions.
+
+Coder is approximately 70% complete.
+
+4. Reviewer Agent
+
+File
+
+agents/reviewer.py
+
+Purpose
+
+Execute generated preprocessing code.
+
+Validate the cleaned DataFrame.
+
+Current improvements planned:
+
+Verify DataFrame validity.
+Compare missing values before/after.
+Compare duplicates before/after.
+Validate row count.
+Validate column count.
+Produce a quality score.
+Return structured review information.
+
+Current desired output:
+
+{
+    "execution_success": True,
+    "quality_score": "7/7",
+    "original_missing": ...,
+    "remaining_missing": ...,
+    "original_duplicates": ...,
+    "remaining_duplicates": ...,
+    "validations": {...}
+}
+
+Reviewer is approximately 80% complete.
+
+Graph Pipeline
+
+File
+
+agents/graph_pipeline.py
+
+Current workflow:
+
+Inspector
+ ↓
+Planner
+ ↓
+Coder
+ ↓
+Reviewer
+ ↓
+END
+
+The graph architecture is considered correct.
+
+No redesign is required.
+
+Current Problem
+
+The agents are no longer fully compatible.
+
+Inspector output has changed.
+
+Planner output has changed.
+
+Coder still expects the old Planner output.
+
+Therefore, the pipeline is currently inconsistent and requires refactoring.
+
+Immediate Goal (Phase 1)
+
+Complete a consistent Version 2 pipeline.
+
+Tasks:
+
+Keep the current LangGraph architecture.
+Standardize the shared state between agents.
+Update the Coder to understand the new Planner output.
+Improve Reviewer validation.
+Ensure the pipeline runs successfully end-to-end.
+Update tests.
+
+Do not redesign the graph unless necessary.
+
+Phase 2
+
+Improve intelligence.
+
+Planned additions:
+
+Retry loop
+Error feedback
+Multiple retries
+Agent memory
+Better reasoning
+Better preprocessing decisions
+Explainable outputs
+
+Desired graph:
+
+Inspector
+ ↓
+Planner
+ ↓
+Coder
+ ↓
+Reviewer
+ ↓
+Success?
+ ↙      ↘
+END    Retry Coder
+          ↓
+      Reviewer
+Phase 3
+
+User Interface
+
+Build a Streamlit application.
+
+Desired flow:
+
+Upload CSV
+
+↓
+
+Inspector Report
+
+↓
+
+Cleaning Plan
+
+↓
+
+Generated Python Code
+
+↓
+
+Execution Report
+
+↓
+
+Download Cleaned CSV
+Phase 4
+
+Production Engineering
+
+Add:
+
+Logging
+Config file
+Type hints
+Docker
+GitHub Actions
+Better tests
+Environment configuration
+Multiple LLM providers
+Better documentation
+Project Folder Structure
+DATACLEANING_AI/
+
+agents/
+    inspector.py
+    planner.py
+    coder.py
+    reviewer.py
+    graph_pipeline.py
+
+tests/
+
+datasets/
+
+results/
+
+ui/
+
+configs/
+
+logs/
+
+README.md
+
+requirements.txt
+
+Dockerfile
+
+app.py
+Long-Term Vision
+
+Transform the project from a simple preprocessing pipeline into an AI Data Engineering Platform.
+
+Potential future capabilities:
+
+Automatic target column detection
+Classification vs. regression detection
+Time-series dataset support
+NLP dataset support
+Feature engineering
+Feature selection
+Drift detection
+Data quality scoring
+Explainable AI reports
+PDF/HTML reports
+Multi-LLM support
+Human approval workflow
+Versioned cleaning pipelines
+Plugin architecture for custom preprocessing steps
+Resume Description (future)
+
+DATACLEANING_AI – AI-Powered Multi-Agent Data Preprocessing System
+
+Designed and implemented a multi-agent workflow using LangGraph and LangChain to automate dataset inspection, preprocessing planning, Python code generation, execution, and validation.
+Built deterministic data profiling agents with Pandas and integrated Gemini for AI-assisted preprocessing decisions.
+Automated detection of missing values, duplicates, outliers, datatype inconsistencies, encoding, scaling, and datetime transformations.
+Implemented an execution-review pipeline to validate generated preprocessing code and produce machine-learning-ready datasets.
+Prompt for Another AI
+You are an expert AI Engineer specializing in Python, LangChain, LangGraph, Pandas, Scikit-Learn, LLM systems, and production AI engineering.
+
+You are continuing an existing project called DATACLEANING_AI.
+
+PROJECT GOAL
+
+Build a production-quality Multi-Agent AI Data Cleaning System that autonomously converts messy tabular datasets into machine-learning-ready datasets.
+
+CURRENT ARCHITECTURE
+
+The project uses LangGraph StateGraph.
+
+Pipeline:
+
+Inspector
+↓
+
+Planner
+↓
+
+Coder
+↓
+
+Reviewer
+
+Inspector performs deterministic dataset analysis using pandas.
+
+Planner consumes the inspection report and creates structured preprocessing actions.
+
+Coder uses Gemini through LangChain to generate executable preprocessing code.
+
+Reviewer executes the generated code and validates the cleaned DataFrame.
+
+CURRENT STATUS
+
+The Inspector has already been upgraded to produce a rich structured report including shape, datatypes, missing values, duplicate rows/columns, constant columns, high-cardinality columns, numeric summaries, outlier detection, memory usage, empty strings, and possible datetime columns.
+
+The Planner has been redesigned conceptually to output structured actions (dataset_actions and column_actions with reasons), but the pipeline is not yet fully synchronized.
+
+The Coder still expects the old Planner format and must be updated to consume the new structured plan and the richer inspection report.
+
+The Reviewer should validate execution success, DataFrame integrity, improvements in missing values and duplicates, and return structured validation results.
+
+The LangGraph architecture itself should remain unchanged unless there is a compelling engineering reason.
+
+IMMEDIATE OBJECTIVE
+
+Refactor the agents so they all use a consistent shared state and communicate using compatible data structures.
+
+Do not redesign the overall workflow.
+
+After compatibility is restored, implement:
+- retry loop from Reviewer back to Coder,
+- structured logging,
+- comprehensive tests,
+- production-quality documentation,
+- and a simple Streamlit interface.
+
+When proposing code changes:
+1. Preserve modularity.
+2. Prefer deterministic logic where possible.
+3. Use the LLM only where reasoning or code generation adds value.
+4. Explain any interface changes between agents.
+5. Provide complete updated files rather than isolated snippets when practical.
+6. Consider maintainability, testing, and production-readiness throughout.
+
+This handoff captures the current state, the intended architecture, the remaining work, and the engineering principles behind the project so another AI (or a human collaborator) can continue development without needing to reconstruct the project's context.
