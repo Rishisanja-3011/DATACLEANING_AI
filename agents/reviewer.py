@@ -1,89 +1,211 @@
 import traceback
+from typing import Any, Dict, Tuple
+
 import pandas as pd
 
 
-def execute_and_review(df, python_code):
+def execute_and_review(
+    df: pd.DataFrame,
+    python_code: str
+) -> Tuple[Dict[str, Any], pd.DataFrame]:
     """
-    Execute generated preprocessing code and review the cleaned dataframe.
+    Execute generated preprocessing code and validate the resulting DataFrame.
+
+    The original DataFrame is never modified directly.
     """
+
+    original_df = df.copy()
+
+    # =========================
+    # ORIGINAL METRICS
+    # =========================
+
+    original_rows = len(original_df)
+    original_columns = len(original_df.columns)
+    original_missing = int(original_df.isnull().sum().sum())
+    original_duplicates = int(original_df.duplicated().sum())
+
+    # =========================
+    # EXECUTION ENVIRONMENT
+    # =========================
 
     local_env = {
-        "df": df.copy(),
-        "pd": pd
+        "df": original_df.copy(),
+        "pd": pd,
     }
-
-    original_rows = len(df)
-    original_columns = list(df.columns)
-    original_missing = int(df.isnull().sum().sum())
-    original_duplicates = int(df.duplicated().sum())
 
     try:
 
-        # -------------------------
-        # Execute Generated Code
-        # -------------------------
+        # =========================
+        # EXECUTE GENERATED CODE
+        # =========================
 
-        exec(python_code, globals(), local_env)
+        exec(
+            python_code,
+            {"__builtins__": __builtins__},
+            local_env
+        )
 
-        cleaned_df = local_env["df"]
+        cleaned_df = local_env.get("df")
 
         if not isinstance(cleaned_df, pd.DataFrame):
-            raise TypeError("Generated code did not return a pandas DataFrame.")
+            raise TypeError(
+                "Generated preprocessing code did not leave a "
+                "pandas DataFrame in variable 'df'."
+            )
 
-        # -------------------------
-        # Metrics
-        # -------------------------
+        # =========================
+        # FINAL METRICS
+        # =========================
 
-        final_missing = int(cleaned_df.isnull().sum().sum())
-        final_duplicates = int(cleaned_df.duplicated().sum())
+        final_rows = len(cleaned_df)
+        final_columns = len(cleaned_df.columns)
 
-        # -------------------------
-        # Validation Checks
-        # -------------------------
+        final_missing = int(
+            cleaned_df.isnull().sum().sum()
+        )
 
-        validations = {
-            "is_dataframe": isinstance(cleaned_df, pd.DataFrame),
-            "rows_remaining": len(cleaned_df),
-            "columns_remaining": len(cleaned_df.columns),
-            "missing_values_reduced": final_missing <= original_missing,
-            "duplicates_reduced": final_duplicates <= original_duplicates,
-            "column_count_valid": len(cleaned_df.columns) > 0,
-            "row_count_valid": len(cleaned_df) > 0,
+        final_duplicates = int(
+            cleaned_df.duplicated().sum()
+        )
+
+        # =========================
+        # METRICS
+        # =========================
+
+        metrics = {
+            "original_rows": original_rows,
+            "final_rows": final_rows,
+
+            "original_columns": original_columns,
+            "final_columns": final_columns,
+
+            "original_missing": original_missing,
+            "remaining_missing": final_missing,
+
+            "original_duplicates": original_duplicates,
+            "remaining_duplicates": final_duplicates,
         }
 
-        # -------------------------
-        # Quality Score
-        # -------------------------
+        # =========================
+        # VALIDATIONS
+        # =========================
 
-        score = 0
+        validations = {
+            "is_dataframe": True,
 
-        for passed in validations.values():
+            "row_count_valid":
+                final_rows > 0,
 
-            if isinstance(passed, bool) and passed:
-                score += 1
+            "column_count_valid":
+                final_columns > 0,
+
+            "missing_values_not_increased":
+                final_missing <= original_missing,
+
+            "duplicates_not_increased":
+                final_duplicates <= original_duplicates,
+        }
+
+        # =========================
+        # QUALITY SCORE
+        # =========================
+
+        passed_checks = sum(
+            1
+            for passed in validations.values()
+            if passed
+        )
+
+        total_checks = len(validations)
+
+        validation_success = all(
+            validations.values()
+        )
+
+        # =========================
+        # REVIEW REPORT
+        # =========================
 
         review = {
             "execution_success": True,
-            "quality_score": f"{score}/{len([v for v in validations.values() if isinstance(v,bool)])}",
-            "validations": validations,
-            "original_shape": df.shape,
-            "final_shape": cleaned_df.shape,
-            "original_missing": original_missing,
-            "remaining_missing": final_missing,
-            "original_duplicates": original_duplicates,
-            "remaining_duplicates": final_duplicates,
-            "columns": list(cleaned_df.columns),
+
+            "validation_success":
+                validation_success,
+
+            "pipeline_success":
+                validation_success,
+
+            "quality_score":
+                f"{passed_checks}/{total_checks}",
+
+            "metrics":
+                metrics,
+
+            "validations":
+                validations,
+
+            "original_shape":
+                original_df.shape,
+
+            "final_shape":
+                cleaned_df.shape,
+
+            "columns":
+                list(cleaned_df.columns),
+
+            "error_message":
+                None,
         }
 
         return review, cleaned_df
 
-    except Exception as e:
+    except Exception as exc:
+
+        # =========================
+        # EXECUTION FAILURE
+        # =========================
 
         review = {
             "execution_success": False,
-            "error_message": str(e),
-            "traceback": traceback.format_exc(),
-            "quality_score": "0/7"
+
+            "validation_success": False,
+
+            "pipeline_success": False,
+
+            "quality_score": "0/5",
+
+            "metrics": {
+                "original_rows":
+                    original_rows,
+
+                "original_columns":
+                    original_columns,
+
+                "original_missing":
+                    original_missing,
+
+                "original_duplicates":
+                    original_duplicates,
+            },
+
+            "validations": {},
+
+            "original_shape":
+                original_df.shape,
+
+            "final_shape":
+                None,
+
+            "columns":
+                list(original_df.columns),
+
+            "error_message":
+                str(exc),
+
+            "traceback":
+                traceback.format_exc(),
         }
 
-        return review, df
+        # Return original data on failure
+        return review, original_df
