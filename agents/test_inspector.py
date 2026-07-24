@@ -1,4 +1,4 @@
-from inspector import inspect_data
+from agents.inspector import inspect_data
 
 def test_inspect_data(dummy_df):
     report = inspect_data(dummy_df)

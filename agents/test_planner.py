@@ -1,5 +1,5 @@
-from inspector import inspect_data
-from planner import create_plan
+from agents.inspector import inspect_data
+from agents.planner import create_plan
 
 def test_create_plan(dummy_df):
     report = inspect_data(dummy_df)
