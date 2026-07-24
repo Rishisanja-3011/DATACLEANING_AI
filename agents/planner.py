@@ -123,7 +123,13 @@ def create_plan(report: Dict[str, Any]) -> Dict[str, Any]:
         # Encoding
         # --------------------------
 
-        if col in report["categorical_columns"]:
+        # Do not encode columns that are being treated as datetime.
+        # The original column will be replaced by extracted
+        # year/month/day features.
+        if (
+            col in report["categorical_columns"]
+            and col not in report["possible_datetime_columns"]
+        ):
 
             if col in report["high_cardinality_columns"]:
 
