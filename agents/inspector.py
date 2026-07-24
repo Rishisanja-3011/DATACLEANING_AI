@@ -37,8 +37,10 @@ def inspect_data(df: pd.DataFrame) -> dict:
     )
 
     report["categorical_columns"] = (
-        df.select_dtypes(include=["object", "category"]).columns.tolist()
-    )
+        df.select_dtypes(
+            include=["object", "string", "category"]
+        ).columns.tolist()
+    )   
 
     report["datetime_columns"] = (
         df.select_dtypes(include=["datetime"]).columns.tolist()
@@ -107,7 +109,9 @@ def inspect_data(df: pd.DataFrame) -> dict:
 
     high_cardinality = []
 
-    for col in df.select_dtypes(include=["object"]).columns:
+    for col in df.select_dtypes(
+        include=["object", "string", "category"]
+    ).columns:      
 
         ratio = df[col].nunique() / max(len(df), 1)
 
@@ -182,22 +186,40 @@ def inspect_data(df: pd.DataFrame) -> dict:
 
     for col in report["categorical_columns"]:
 
+        sample = df[col].dropna()
+
+        if sample.empty:
+            continue
+
+        # Convert values to strings
+        sample = sample.astype(str)
+
+        # Basic heuristic:
+        # only attempt datetime parsing when values
+        # contain common date separators.
+        looks_like_date = sample.str.contains(
+            r"[-/]",
+            regex=True
+        ).mean()
+
+        if looks_like_date < 0.8:
+            continue
+
         try:
-            converted = pd.to_datetime(df[col], errors="coerce")
 
-            success = converted.notna().sum()
+            converted = pd.to_datetime(
+                sample,
+                errors="coerce"
+            )
 
-            if success > len(df) * 0.8:
+            success_ratio = converted.notna().mean()
+
+            if success_ratio >= 0.8:
                 possible_dates.append(col)
 
-        except Exception:
-            pass
+        except (ValueError, TypeError):
+            continue
 
     report["possible_datetime_columns"] = possible_dates
 
     return report
-
-
-
-
-    
